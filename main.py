@@ -7,7 +7,6 @@ from pydantic import BaseModel, Field
 from ml.data import apply_label, process_data
 from ml.model import inference, load_model
 
-
 # DO NOT MODIFY
 class Data(BaseModel):
     age: int = Field(..., example=37)
@@ -27,32 +26,23 @@ class Data(BaseModel):
     hours_per_week: int = Field(..., example=40, alias="hours-per-week")
     native_country: str = Field(..., example="United-States", alias="native-country")
 
+path = os.path.join('model', 'encoder.pkl')
+encoder = load_model(path)
 
-# ---- load saved artifacts -------------------------------------------------
-project_path = "."
-model_dir = os.path.join(project_path, "model")
+path = os.path.join('model', 'model.pkl')
+model = load_model(path)
 
-encoder_path = os.path.join(model_dir, "encoder.pkl")
-lb_path = os.path.join(model_dir, "lb.pkl")
-model_path = os.path.join(model_dir, "model.pkl")
-
-encoder = load_model(encoder_path)
-lb = load_model(lb_path)
-model = load_model(model_path)
-
-# ---- create FastAPI app ---------------------------------------------------
-app = FastAPI(title="Income Classification API")
-
-
-# ---- root endpoint --------------------------------------------------------
+# TODO: create a RESTful API using FastAPI
+app = FastAPI()
+# TODO: create a GET on the root giving a welcome message
 @app.get("/")
 async def get_root():
-    """Simple welcome endpoint."""
-    return {"message": "Hello from the income classification API!"}
+    """ Say hello!"""
+    return 'Welcome to the API'
 
 
-# ---- prediction endpoint --------------------------------------------------
-@app.post("/predict/")
+# TODO: create a POST on a different path that does model inference
+@app.post("/data/")
 async def post_inference(data: Data):
     # DO NOT MODIFY: turn the Pydantic model into a dict.
     data_dict = data.dict()
@@ -72,21 +62,11 @@ async def post_inference(data: Data):
         "sex",
         "native-country",
     ]
-
-    # process data for inference
     data_processed, _, _, _ = process_data(
         data,
-        categorical_features=cat_features,
-        label=None,
+        categorical_features = cat_features,
         training=False,
         encoder=encoder,
-        lb=lb,
     )
-
-    # make prediction
-    preds = inference(model, data_processed)
-    _inference = preds[0]
-
-    # convert 0/1 to <=50K />50K label
-    # NOTE: apply_label expects an indexable input, so wrap in a list
-    return {"result": apply_label([_inference])}
+    _inference = inference(model, data_processed)
+    return {"result": apply_label(_inference)}
